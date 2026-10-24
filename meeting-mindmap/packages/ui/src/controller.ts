@@ -148,6 +148,7 @@ export class MeetingController {
       actionItemsSoFar: s.actionItems.map((a) => a.task).slice(-30),
       keyDebatesSoFar: s.keyDebates.slice(-30),
       conclusionsSoFar: s.conclusions.slice(-30),
+      topicSoFar: s.topic,
       mode: this.opts.mode,
     };
     s.setUpdating(true);

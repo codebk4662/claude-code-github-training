@@ -13,6 +13,7 @@ const RequestSchema = z.object({
   actionItemsSoFar: z.array(z.string().max(300)).max(60),
   keyDebatesSoFar: z.array(z.string().max(300)).max(60),
   conclusionsSoFar: z.array(z.string().max(300)).max(60),
+  topicSoFar: z.string().max(500).nullable(),
   mode: z.enum(["online", "offline"]),
 });
 
@@ -53,8 +54,6 @@ function mockMindmapResponse(req: z.infer<typeof RequestSchema>): MindmapRespons
   const newConclusions: string[] = [];
   const seenBranch = new Set<string>();
   const firstBySpeaker: { speaker: string; text: string }[] = [];
-  let lastClause = "";
-  let lastSpeaker = "";
 
   req.utterances.forEach((line, i) => {
     const { speaker, text } = splitUtterance(line);
@@ -81,8 +80,6 @@ function mockMindmapResponse(req: z.infer<typeof RequestSchema>): MindmapRespons
     });
     if (COMMITMENT_RE.test(text)) newActionItems.push({ task: text, owner: speaker, due: null });
     if (CONCLUSION_RE.test(text)) newConclusions.push(`(mock) ${speaker}: ${shortClause(text, 80)}`);
-    lastClause = shortClause(text, 30);
-    lastSpeaker = speaker;
   });
 
   const newKeyDebates: string[] = [];
@@ -94,13 +91,21 @@ function mockMindmapResponse(req: z.infer<typeof RequestSchema>): MindmapRespons
     );
   }
 
+  // 실제 요약(주제 종합)은 규칙 기반으로 흉내낼 수 없으므로, 그런 척하지 않고
+  // 정직하게 플레이스홀더임을 밝힌다 — mock의 단순함이 실제 기능의 완성도로
+  // 오인되지 않도록, "마지막 발언 그대로" 같은 건 절대 만들지 않는다.
+  const topic =
+    req.topicSoFar === null
+      ? `(mock) 주제 요약은 실제 Claude 연결 후 정확해집니다 — 지금까지 발언 ${req.utterances.length}건, 화자 ${firstBySpeaker.length}명`
+      : `(mock) 지금까지 발언 ${req.utterances.length}건, 화자 ${firstBySpeaker.length}명 (이번 구간)`;
+
   return {
     ops,
     summaryBullets: req.utterances.map((u) => {
       const { speaker, text } = splitUtterance(u);
       return `(mock) ${speaker}: ${shortClause(text, 80)}`;
     }),
-    topic: lastClause ? `(mock) ${lastSpeaker}: ${lastClause}` : null,
+    topic,
     newActionItems,
     newKeyDebates,
     newConclusions,

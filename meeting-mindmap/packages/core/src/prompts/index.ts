@@ -64,7 +64,7 @@ export const MINDMAP_SYSTEM = `당신은 진행 중인 회의를 실시간으로
 - 인사말·잡담·추임새처럼 내용이 없는 발언은 무시합니다. 바꿀 것이 없으면 ops는 빈 배열.
 
 summaryBullets: 이번 발언에서 새로 나온 중요한 내용만 한 줄씩(없으면 빈 배열). 이미 요약된 내용은 반복하지 마세요.
-topic: 지금까지 파악된 회의의 핵심 주제를 한 문장으로. **실제로 주제가 처음 분명해졌거나 바뀌었을 때만** 채우고, 이전과 같으면 null (매번 반복해서 채우지 마세요).
+topic: 지금까지의 전체 논의를 종합해서, 지금 이 회의가 무엇에 대해 어떤 입장·흐름으로 논의되고 있는지를 완결된 한 문장으로 쓰세요(예: "신제품 출시 일정을 두고 사업부는 즉시 진행을, 개발팀은 품질 검증을 위한 연기를 주장하는 중"). **특정 발언 하나를 그대로 옮기거나 가장 최근 발언만 보고 쓰지 마세요.** <topic_so_far>·<current_mindmap>·<summary_so_far>를 함께 보고 전체 흐름을 종합하세요. <topic_so_far>를 그대로 베끼지 말고 새 발언을 반영해 다시 쓰되, 실질적으로 달라지지 않았으면(표현만 다른 정도) null.
 newActionItems: 이번 발언에서 새로 나온 할 일만. <action_items_so_far>에 이미 있는 것과 같은 내용은 다시 넣지 마세요. 없으면 빈 배열.
 newKeyDebates: 이번 발언에서 새로 드러난 주요 쟁점(의견 대립)만. 가능하면 어느 쪽이 어떤 입장인지 한 줄에 함께 담으세요(예: "출시 일정: 사업부는 즉시 진행을 원하고 개발팀은 안정성 검증을 위해 연기를 원함"). <key_debates_so_far>에 이미 있는 쟁점은 다시 쓰지 말고, 그 쟁점에 새로운 전개가 있으면 새 문장으로 추가하세요. 단순 의견 표명이 아니라 서로 다른 입장이 부딪힐 때만. 없으면 빈 배열.
 newConclusions: 이번 발언에서 새로 합의되었거나 결론이 난 내용만. 발언에 명확한 근거가 있을 때만 쓰고 추측하지 마세요. <conclusions_so_far>에 이미 있는 것과 같은 내용은 반복하지 마세요. 없으면 빈 배열.
@@ -97,6 +97,10 @@ ${req.keyDebatesSoFar.length ? req.keyDebatesSoFar.map((s) => `- ${s}`).join("\n
 <conclusions_so_far>
 ${req.conclusionsSoFar.length ? req.conclusionsSoFar.map((s) => `- ${s}`).join("\n") : "(없음)"}
 </conclusions_so_far>
+
+<topic_so_far>
+${req.topicSoFar ?? "(아직 없음)"}
+</topic_so_far>
 
 <new_utterances>
 ${req.utterances.join("\n")}

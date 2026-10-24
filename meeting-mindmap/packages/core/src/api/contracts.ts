@@ -14,6 +14,8 @@ export interface MindmapRequest {
   keyDebatesSoFar: string[];
   /** 지금까지 나온 결론/합의 (중복 방지용) */
   conclusionsSoFar: string[];
+  /** 지금까지 모델이 정리한 주제 (refine의 입력 — 이걸 보고 다시 종합해서 쓰게 함) */
+  topicSoFar: string | null;
   /** 회의 유형 힌트 */
   mode: "online" | "offline";
 }
