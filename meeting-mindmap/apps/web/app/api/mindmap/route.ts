@@ -13,10 +13,34 @@ const RequestSchema = z.object({
   mode: z.enum(["online", "offline"]),
 });
 
+/** "[00:12] 화자: 내용" → "내용"만 추출 */
+function stripUtterancePrefix(line: string): string {
+  return line.replace(/^\[\d{2}:\d{2}\]\s*[^:]*:\s*/, "");
+}
+
+/** ANTHROPIC_API_KEY 없이 전체 파이프라인을 확인할 수 있도록, 발언마다 루트 밑에 노드를 하나씩 추가하는 가짜 응답 */
+function mockMindmapResponse(req: z.infer<typeof RequestSchema>): MindmapResponse {
+  const base = Date.now();
+  const ops = req.utterances.map((u, i) => ({
+    op: "add" as const,
+    id: `mock-${base}-${i}`,
+    parentId: null,
+    label: `(mock) ${stripUtterancePrefix(u).slice(0, 20)}`,
+    note: null,
+  }));
+  return {
+    ops,
+    summaryBullets: req.utterances.map((u) => `(mock) ${stripUtterancePrefix(u).slice(0, 60)}`),
+    title: null,
+  };
+}
+
 /** 새 발언을 받아 마인드맵 변경 명령(패치)과 요약 bullet을 돌려준다 */
 export async function POST(req: Request) {
   const parsed = RequestSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return json(req, { error: "잘못된 요청입니다." }, 400);
+
+  if (process.env.MOCK_LLM === "1") return json(req, mockMindmapResponse(parsed.data));
 
   try {
     const response = await anthropic().messages.parse({

@@ -14,10 +14,24 @@ const RequestSchema = z.object({
   mode: z.enum(["online", "offline"]),
 });
 
+/** ANTHROPIC_API_KEY 없이 전체 파이프라인을 확인할 수 있도록, 실제 발언 기록을 그대로 요약처럼 나열하는 가짜 회의록 */
+function mockSummary(req: z.infer<typeof RequestSchema>): MeetingSummary {
+  return {
+    title: "(mock) 회의록",
+    overview: `(mock) 참석자 ${req.speakers.join(", ") || "알 수 없음"}, 발언 ${req.transcript.length}건을 기록했습니다. 실제 요약은 ANTHROPIC_API_KEY 설정 후 확인할 수 있습니다.`,
+    keyPoints: req.transcript.slice(0, 5),
+    decisions: [],
+    actionItems: [],
+    openQuestions: [],
+  };
+}
+
 /** 회의 종료 시 전체 기록으로 최종 회의록을 만든다 */
 export async function POST(req: Request) {
   const parsed = RequestSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return json(req, { error: "잘못된 요청입니다." }, 400);
+
+  if (process.env.MOCK_LLM === "1") return json(req, mockSummary(parsed.data));
 
   try {
     const stream = anthropic().messages.stream({
