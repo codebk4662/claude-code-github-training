@@ -2,6 +2,7 @@ import { create } from "zustand";
 import {
   applyPatch,
   createMindMap,
+  type ActionItem,
   type MeetingSummary,
   type MindMap,
   type PartialLine,
@@ -23,6 +24,10 @@ export interface MeetingState {
   /** 최근 패치로 바뀐 노드 (하이라이트) */
   highlightIds: string[];
   summaryBullets: string[];
+  /** 지금 논의 중인 핵심 주제 한 줄. 아직 파악 안 되면 null */
+  currentFocus: string | null;
+  /** 진행 중 액션아이템 (회의 중 누적) */
+  actionItems: ActionItem[];
   speakerNames: SpeakerNames;
   finalSummary: MeetingSummary | null;
   /** 마인드맵 갱신 요청 진행 중 */
@@ -40,6 +45,8 @@ export interface MeetingState {
   applyOps(ops: PatchOp[], title?: string | null): void;
   clearHighlight(): void;
   addSummaryBullets(bullets: string[]): void;
+  setCurrentFocus(focus: string | null): void;
+  addActionItems(items: ActionItem[]): void;
   renameSpeaker(key: string, name: string): void;
   renameNode(id: string, label: string): void;
   setFinalSummary(s: MeetingSummary | null): void;
@@ -57,6 +64,8 @@ const initial = (title = "새 회의") => ({
   mindmap: createMindMap(title),
   highlightIds: [],
   summaryBullets: [],
+  currentFocus: null,
+  actionItems: [],
   speakerNames: {},
   finalSummary: null,
   updating: false,
@@ -82,6 +91,13 @@ export const useMeeting = create<MeetingState>()((set) => ({
   clearHighlight: () => set({ highlightIds: [] }),
   addSummaryBullets: (bullets) =>
     set((s) => ({ summaryBullets: [...s.summaryBullets, ...bullets.filter((b) => b.trim())] })),
+  setCurrentFocus: (currentFocus) => set({ currentFocus }),
+  addActionItems: (items) =>
+    set((s) => {
+      const known = new Set(s.actionItems.map((a) => a.task.trim()));
+      const fresh = items.filter((a) => a.task.trim() && !known.has(a.task.trim()));
+      return fresh.length ? { actionItems: [...s.actionItems, ...fresh] } : {};
+    }),
   renameSpeaker: (key, name) => set((s) => ({ speakerNames: { ...s.speakerNames, [key]: name } })),
   renameNode: (id, label) =>
     set((s) => {

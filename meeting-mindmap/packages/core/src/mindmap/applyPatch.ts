@@ -1,5 +1,11 @@
 import type { MindMap, PatchOp } from "./types";
 
+function mergeSpeakers(existing: string[] | undefined, incoming: string[] | null | undefined): string[] | undefined {
+  if (!incoming?.length) return existing;
+  const set = new Set([...(existing ?? []), ...incoming.filter((s) => s.trim())]);
+  return set.size ? [...set] : existing;
+}
+
 export interface ApplyResult {
   map: MindMap;
   /** 이번 패치로 추가·수정된 노드 id (UI 하이라이트용) */
@@ -48,13 +54,19 @@ export function applyPatch(input: MindMap, ops: PatchOp[]): ApplyResult {
         }
         if (existing) {
           // 이미 있는 id면 수정으로 취급
-          map.nodes[id] = { ...existing, label, note: op.note ?? existing.note };
+          map.nodes[id] = {
+            ...existing,
+            label,
+            note: op.note ?? existing.note,
+            speakers: mergeSpeakers(existing.speakers, op.speakers),
+          };
         } else {
           map.nodes[id] = {
             id,
             parentId: parentOrRoot(op.parentId),
             label,
             note: op.note ?? undefined,
+            speakers: mergeSpeakers(undefined, op.speakers),
             seq: map.nextSeq++,
           };
         }
@@ -70,6 +82,7 @@ export function applyPatch(input: MindMap, ops: PatchOp[]): ApplyResult {
           ...existing,
           label: op.label?.trim() || existing.label,
           note: op.note ?? existing.note,
+          speakers: mergeSpeakers(existing.speakers, op.speakers),
         };
         changed.add(id);
         break;
@@ -93,6 +106,8 @@ export function applyPatch(input: MindMap, ops: PatchOp[]): ApplyResult {
         for (const node of Object.values(map.nodes)) {
           if (node.parentId === id) map.nodes[node.id] = { ...node, parentId: into };
         }
+        const target = map.nodes[into];
+        map.nodes[into] = { ...target, speakers: mergeSpeakers(target.speakers, existing.speakers ?? null) };
         delete map.nodes[id];
         changed.delete(id);
         changed.add(into);

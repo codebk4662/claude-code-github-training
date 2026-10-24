@@ -12,6 +12,16 @@ export function speakerName(names: SpeakerNames, speakerKey: string): string {
   return names[speakerKey]?.trim() || defaultSpeakerName(speakerKey);
 }
 
+const SPEAKER_COLORS = 8;
+
+/** 화자 표시 이름(또는 키)마다 고정 색상 번호(0~7). 자막·마인드맵에서 동일 화자는 같은 색을 쓰도록 공유한다 */
+export function speakerColorIndex(name: string): number {
+  if (name === "나" || name === "me") return 0;
+  let h = 0;
+  for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return (h % (SPEAKER_COLORS - 1)) + 1;
+}
+
 /** LLM 프롬프트용 한 줄: "[03:12] 김부장: 예산은…" */
 export function formatUtterance(u: Utterance, names: SpeakerNames): string {
   const sec = Math.floor(u.at / 1000);

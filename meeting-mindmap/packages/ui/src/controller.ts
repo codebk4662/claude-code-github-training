@@ -63,8 +63,8 @@ export class MeetingController {
 
   constructor(private readonly opts: ControllerOptions) {
     this.scheduler = new BatchScheduler<Utterance>({
-      intervalMs: opts.intervalMs ?? 20_000,
-      maxBatch: opts.maxBatch ?? 8,
+      intervalMs: opts.intervalMs ?? 25_000,
+      maxBatch: opts.maxBatch ?? 10,
       run: (batch) => this.updateMindmap(batch),
       onError: (err) => {
         console.error("[mindmap]", err);
@@ -145,6 +145,7 @@ export class MeetingController {
       outline: toOutline(s.mindmap),
       utterances: batch.map((u) => formatUtterance(u, s.speakerNames)),
       summarySoFar: s.summaryBullets.slice(-30),
+      actionItemsSoFar: s.actionItems.map((a) => a.task).slice(-30),
       mode: this.opts.mode,
     };
     s.setUpdating(true);
@@ -152,6 +153,8 @@ export class MeetingController {
       const res = await postJson<MindmapResponse>(this.opts.apiBase, "/api/mindmap", req);
       this.store.applyOps(res.ops, res.title);
       this.store.addSummaryBullets(res.summaryBullets);
+      if (res.currentFocus) this.store.setCurrentFocus(res.currentFocus);
+      this.store.addActionItems(res.newActionItems);
       this.store.setSyncWarning(null);
     } finally {
       this.store.setUpdating(false);

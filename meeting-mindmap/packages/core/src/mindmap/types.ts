@@ -5,6 +5,8 @@ export interface MindNode {
   parentId: string | null;
   label: string;
   note?: string;
+  /** 이 노드 내용을 말한 화자 이름들 (발언에 표시된 이름 그대로) */
+  speakers?: string[];
   /** 추가된 순서. 형제 노드 정렬과 "새 노드" 하이라이트에 사용 */
   seq: number;
 }
@@ -29,6 +31,8 @@ export interface PatchOp {
   parentId: string | null;
   label: string | null;
   note: string | null;
+  /** 이 내용을 말한 화자 이름(발언에 보이는 이름 그대로) 배열. 모르면 null */
+  speakers: string[] | null;
 }
 
 export function createMindMap(title = "회의"): MindMap {

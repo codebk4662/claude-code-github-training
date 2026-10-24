@@ -6,6 +6,7 @@ const op = (o: Partial<PatchOp> & Pick<PatchOp, "op" | "id">): PatchOp => ({
   parentId: null,
   label: null,
   note: null,
+  speakers: null,
   ...o,
 });
 
@@ -58,6 +59,17 @@ describe("applyPatch", () => {
     ]);
     expect(map.nodes.b).toBeUndefined();
     expect(map.nodes.c?.parentId).toBe("a");
+  });
+
+  it("unions speakers on add-as-update and on merge", () => {
+    let { map } = applyPatch(createMindMap(), [
+      op({ op: "add", id: "a", label: "일정", speakers: ["김부장"] }),
+      op({ op: "add", id: "b", label: "스케줄", speakers: ["이과장"] }),
+    ]);
+    ({ map } = applyPatch(map, [op({ op: "add", id: "a", label: "일정", speakers: ["박대리"] })]));
+    expect(map.nodes.a?.speakers).toEqual(["김부장", "박대리"]);
+    ({ map } = applyPatch(map, [op({ op: "merge", id: "b", parentId: "a" })]));
+    expect(map.nodes.a?.speakers).toEqual(["김부장", "박대리", "이과장"]);
   });
 
   it("never moves or merges the root", () => {

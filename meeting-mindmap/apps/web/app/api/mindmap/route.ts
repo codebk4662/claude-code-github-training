@@ -10,27 +10,82 @@ const RequestSchema = z.object({
   outline: z.string().max(40_000),
   utterances: z.array(z.string().max(2_000)).min(1).max(80),
   summarySoFar: z.array(z.string().max(500)).max(60),
+  actionItemsSoFar: z.array(z.string().max(300)).max(60),
   mode: z.enum(["online", "offline"]),
 });
 
-/** "[00:12] 화자: 내용" → "내용"만 추출 */
-function stripUtterancePrefix(line: string): string {
-  return line.replace(/^\[\d{2}:\d{2}\]\s*[^:]*:\s*/, "");
+/** "[00:12] 화자: 내용" → {speaker, text} */
+function splitUtterance(line: string): { speaker: string; text: string } {
+  const m = line.match(/^\[\d{2}:\d{2}\]\s*([^:]+):\s*(.*)$/);
+  return m?.[1] !== undefined && m[2] !== undefined
+    ? { speaker: m[1].trim(), text: m[2].trim() }
+    : { speaker: "화자", text: line };
 }
 
-/** ANTHROPIC_API_KEY 없이 전체 파이프라인을 확인할 수 있도록, 발언마다 루트 밑에 노드를 하나씩 추가하는 가짜 응답 */
+/** 어절 경계에서 자른 짧은 절. 원문 전체는 버리지 않고 note에 따로 보존한다 */
+function shortClause(text: string, max = 40): string {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const lastSpace = cut.lastIndexOf(" ");
+  return `${lastSpace > 10 ? cut.slice(0, lastSpace) : cut}…`;
+}
+
+function slug(name: string): string {
+  return name.replace(/[^\w가-힣]/g, "").slice(0, 20) || "speaker";
+}
+
+const COMMITMENT_RE = /(하겠습니다|하겠다|확인하겠|진행하겠|공유하겠|배정하겠)\.?$/;
+
+/**
+ * ANTHROPIC_API_KEY 없이 전체 파이프라인을 확인할 수 있도록 만든 가짜 응답.
+ * 실제 NLU를 흉내내는 게 아니라, 화자별 분기·speakers 태그·비축약 라벨이라는
+ * 새 스키마/UI가 그려지는 걸 정직하게 보여주는 용도다. 화자별 1단계 노드 id를
+ * 결정적으로 만들어서(mock-branch-<화자>), applyPatch의 "기존 id면 update로
+ * 취급" 규칙 덕분에 outline을 파싱하지 않고도 같은 화자는 같은 분기에 쌓인다.
+ */
 function mockMindmapResponse(req: z.infer<typeof RequestSchema>): MindmapResponse {
   const base = Date.now();
-  const ops = req.utterances.map((u, i) => ({
-    op: "add" as const,
-    id: `mock-${base}-${i}`,
-    parentId: null,
-    label: `(mock) ${stripUtterancePrefix(u).slice(0, 20)}`,
-    note: null,
-  }));
+  const ops: MindmapResponse["ops"] = [];
+  const newActionItems: MindmapResponse["newActionItems"] = [];
+  const seenBranch = new Set<string>();
+  let lastClause = "";
+  let lastSpeaker = "";
+
+  req.utterances.forEach((line, i) => {
+    const { speaker, text } = splitUtterance(line);
+    const branchId = `mock-branch-${slug(speaker)}`;
+    if (!seenBranch.has(branchId)) {
+      seenBranch.add(branchId);
+      ops.push({
+        op: "add",
+        id: branchId,
+        parentId: null,
+        label: `${speaker}의 발언`,
+        note: null,
+        speakers: [speaker],
+      });
+    }
+    ops.push({
+      op: "add",
+      id: `mock-${base}-${i}`,
+      parentId: branchId,
+      label: shortClause(text),
+      note: text,
+      speakers: [speaker],
+    });
+    if (COMMITMENT_RE.test(text)) newActionItems.push({ task: text, owner: speaker, due: null });
+    lastClause = shortClause(text, 30);
+    lastSpeaker = speaker;
+  });
+
   return {
     ops,
-    summaryBullets: req.utterances.map((u) => `(mock) ${stripUtterancePrefix(u).slice(0, 60)}`),
+    summaryBullets: req.utterances.map((u) => {
+      const { speaker, text } = splitUtterance(u);
+      return `(mock) ${speaker}: ${shortClause(text, 80)}`;
+    }),
+    currentFocus: lastClause ? `(mock) ${lastSpeaker}: ${lastClause}` : null,
+    newActionItems,
     title: null,
   };
 }
@@ -54,7 +109,13 @@ export async function POST(req: Request) {
 
     if (response.stop_reason === "refusal" || !response.parsed_output) {
       // 이번 배치는 건너뛴다 (다음 배치에서 다시 반영됨)
-      const empty: MindmapResponse = { ops: [], summaryBullets: [], title: null };
+      const empty: MindmapResponse = {
+        ops: [],
+        summaryBullets: [],
+        currentFocus: null,
+        newActionItems: [],
+        title: null,
+      };
       return json(req, empty);
     }
     return json(req, response.parsed_output satisfies MindmapResponse);
