@@ -11,6 +11,8 @@ const RequestSchema = z.object({
   utterances: z.array(z.string().max(2_000)).min(1).max(80),
   summarySoFar: z.array(z.string().max(500)).max(60),
   actionItemsSoFar: z.array(z.string().max(300)).max(60),
+  keyDebatesSoFar: z.array(z.string().max(300)).max(60),
+  conclusionsSoFar: z.array(z.string().max(300)).max(60),
   mode: z.enum(["online", "offline"]),
 });
 
@@ -35,6 +37,7 @@ function slug(name: string): string {
 }
 
 const COMMITMENT_RE = /(하겠습니다|하겠다|확인하겠|진행하겠|공유하겠|배정하겠)\.?$/;
+const CONCLUSION_RE = /(합의|확정합니다|정리하겠습니다|그걸로 하죠|동의합니다)/;
 
 /**
  * ANTHROPIC_API_KEY 없이 전체 파이프라인을 확인할 수 있도록 만든 가짜 응답.
@@ -47,12 +50,15 @@ function mockMindmapResponse(req: z.infer<typeof RequestSchema>): MindmapRespons
   const base = Date.now();
   const ops: MindmapResponse["ops"] = [];
   const newActionItems: MindmapResponse["newActionItems"] = [];
+  const newConclusions: string[] = [];
   const seenBranch = new Set<string>();
+  const firstBySpeaker: { speaker: string; text: string }[] = [];
   let lastClause = "";
   let lastSpeaker = "";
 
   req.utterances.forEach((line, i) => {
     const { speaker, text } = splitUtterance(line);
+    if (!firstBySpeaker.some((f) => f.speaker === speaker)) firstBySpeaker.push({ speaker, text });
     const branchId = `mock-branch-${slug(speaker)}`;
     if (!seenBranch.has(branchId)) {
       seenBranch.add(branchId);
@@ -74,9 +80,19 @@ function mockMindmapResponse(req: z.infer<typeof RequestSchema>): MindmapRespons
       speakers: [speaker],
     });
     if (COMMITMENT_RE.test(text)) newActionItems.push({ task: text, owner: speaker, due: null });
+    if (CONCLUSION_RE.test(text)) newConclusions.push(`(mock) ${speaker}: ${shortClause(text, 80)}`);
     lastClause = shortClause(text, 30);
     lastSpeaker = speaker;
   });
+
+  const newKeyDebates: string[] = [];
+  const first = firstBySpeaker[0];
+  const second = firstBySpeaker[1];
+  if (first && second) {
+    newKeyDebates.push(
+      `(mock) ${first.speaker}: ${shortClause(first.text, 25)} / ${second.speaker}: ${shortClause(second.text, 25)}`,
+    );
+  }
 
   return {
     ops,
@@ -84,8 +100,10 @@ function mockMindmapResponse(req: z.infer<typeof RequestSchema>): MindmapRespons
       const { speaker, text } = splitUtterance(u);
       return `(mock) ${speaker}: ${shortClause(text, 80)}`;
     }),
-    currentFocus: lastClause ? `(mock) ${lastSpeaker}: ${lastClause}` : null,
+    topic: lastClause ? `(mock) ${lastSpeaker}: ${lastClause}` : null,
     newActionItems,
+    newKeyDebates,
+    newConclusions,
     title: null,
   };
 }
@@ -112,8 +130,10 @@ export async function POST(req: Request) {
       const empty: MindmapResponse = {
         ops: [],
         summaryBullets: [],
-        currentFocus: null,
+        topic: null,
         newActionItems: [],
+        newKeyDebates: [],
+        newConclusions: [],
         title: null,
       };
       return json(req, empty);

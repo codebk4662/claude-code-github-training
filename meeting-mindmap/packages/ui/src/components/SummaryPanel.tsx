@@ -4,7 +4,9 @@ import { buildMeetingMarkdown, downloadText } from "../export";
 export function SummaryPanel() {
   const summary = useMeeting((s) => s.finalSummary);
   const summaryBullets = useMeeting((s) => s.summaryBullets);
-  const currentFocus = useMeeting((s) => s.currentFocus);
+  const topic = useMeeting((s) => s.topic);
+  const keyDebates = useMeeting((s) => s.keyDebates);
+  const conclusions = useMeeting((s) => s.conclusions);
   const actionItems = useMeeting((s) => s.actionItems);
   const status = useMeeting((s) => s.status);
   const hasUtterances = useMeeting((s) => s.utterances.length > 0);
@@ -42,9 +44,11 @@ export function SummaryPanel() {
       ) : (
         <>
           <div className="mm-live-focus">
-            <h4>🎯 지금 논의 주제</h4>
-            <p className={currentFocus ? undefined : "mm-muted"}>{currentFocus ?? "파악 중…"}</p>
+            <h4>🎯 지금 회의 주제</h4>
+            <p className={topic ? undefined : "mm-muted"}>{topic ?? "파악 중…"}</p>
           </div>
+          <Section title="⚡ 주요 쟁점" items={keyDebates} />
+          <Section title="✅ 지금까지 결론 / 합의" items={conclusions} />
           {actionItems.length > 0 && (
             <div className="mm-action-items">
               <h4>📌 진행 중 액션 아이템</h4>

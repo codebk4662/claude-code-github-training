@@ -24,10 +24,14 @@ export interface MeetingState {
   /** 최근 패치로 바뀐 노드 (하이라이트) */
   highlightIds: string[];
   summaryBullets: string[];
-  /** 지금 논의 중인 핵심 주제 한 줄. 아직 파악 안 되면 null */
-  currentFocus: string | null;
+  /** 지금까지 파악된 회의의 핵심 주제. 실제로 바뀌었을 때만 갱신됨 */
+  topic: string | null;
   /** 진행 중 액션아이템 (회의 중 누적) */
   actionItems: ActionItem[];
+  /** 지금까지 드러난 주요 쟁점 (회의 중 누적) */
+  keyDebates: string[];
+  /** 지금까지 합의/결론 난 내용 (회의 중 누적) */
+  conclusions: string[];
   speakerNames: SpeakerNames;
   finalSummary: MeetingSummary | null;
   /** 마인드맵 갱신 요청 진행 중 */
@@ -45,13 +49,22 @@ export interface MeetingState {
   applyOps(ops: PatchOp[], title?: string | null): void;
   clearHighlight(): void;
   addSummaryBullets(bullets: string[]): void;
-  setCurrentFocus(focus: string | null): void;
+  setTopic(topic: string | null): void;
   addActionItems(items: ActionItem[]): void;
+  addKeyDebates(items: string[]): void;
+  addConclusions(items: string[]): void;
   renameSpeaker(key: string, name: string): void;
   renameNode(id: string, label: string): void;
   setFinalSummary(s: MeetingSummary | null): void;
   setUpdating(v: boolean): void;
   load(snapshot: Partial<MeetingState>): void;
+}
+
+/** 이미 있는 문자열(trim 비교)은 빼고 새 항목만 뒤에 붙인다 */
+function dedupeAppend(existing: string[], incoming: string[]): string[] {
+  const known = new Set(existing.map((s) => s.trim()));
+  const fresh = incoming.filter((s) => s.trim() && !known.has(s.trim()));
+  return fresh.length ? [...existing, ...fresh] : existing;
 }
 
 const initial = (title = "새 회의") => ({
@@ -64,8 +77,10 @@ const initial = (title = "새 회의") => ({
   mindmap: createMindMap(title),
   highlightIds: [],
   summaryBullets: [],
-  currentFocus: null,
+  topic: null,
   actionItems: [],
+  keyDebates: [],
+  conclusions: [],
   speakerNames: {},
   finalSummary: null,
   updating: false,
@@ -91,13 +106,15 @@ export const useMeeting = create<MeetingState>()((set) => ({
   clearHighlight: () => set({ highlightIds: [] }),
   addSummaryBullets: (bullets) =>
     set((s) => ({ summaryBullets: [...s.summaryBullets, ...bullets.filter((b) => b.trim())] })),
-  setCurrentFocus: (currentFocus) => set({ currentFocus }),
+  setTopic: (topic) => set({ topic }),
   addActionItems: (items) =>
     set((s) => {
       const known = new Set(s.actionItems.map((a) => a.task.trim()));
       const fresh = items.filter((a) => a.task.trim() && !known.has(a.task.trim()));
       return fresh.length ? { actionItems: [...s.actionItems, ...fresh] } : {};
     }),
+  addKeyDebates: (items) => set((s) => ({ keyDebates: dedupeAppend(s.keyDebates, items) })),
+  addConclusions: (items) => set((s) => ({ conclusions: dedupeAppend(s.conclusions, items) })),
   renameSpeaker: (key, name) => set((s) => ({ speakerNames: { ...s.speakerNames, [key]: name } })),
   renameNode: (id, label) =>
     set((s) => {

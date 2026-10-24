@@ -146,6 +146,8 @@ export class MeetingController {
       utterances: batch.map((u) => formatUtterance(u, s.speakerNames)),
       summarySoFar: s.summaryBullets.slice(-30),
       actionItemsSoFar: s.actionItems.map((a) => a.task).slice(-30),
+      keyDebatesSoFar: s.keyDebates.slice(-30),
+      conclusionsSoFar: s.conclusions.slice(-30),
       mode: this.opts.mode,
     };
     s.setUpdating(true);
@@ -153,8 +155,10 @@ export class MeetingController {
       const res = await postJson<MindmapResponse>(this.opts.apiBase, "/api/mindmap", req);
       this.store.applyOps(res.ops, res.title);
       this.store.addSummaryBullets(res.summaryBullets);
-      if (res.currentFocus) this.store.setCurrentFocus(res.currentFocus);
+      if (res.topic) this.store.setTopic(res.topic);
       this.store.addActionItems(res.newActionItems);
+      this.store.addKeyDebates(res.newKeyDebates);
+      this.store.addConclusions(res.newConclusions);
       this.store.setSyncWarning(null);
     } finally {
       this.store.setUpdating(false);
