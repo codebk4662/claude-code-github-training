@@ -36,8 +36,13 @@ export async function POST(req: Request) {
       return json(req, { error: "회의가 너무 길어 회의록이 잘렸습니다." }, 422);
     }
     const text = message.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
-    const summary = SummaryOutputSchema.parse(JSON.parse(text));
-    return json(req, summary satisfies MeetingSummary);
+    let summary: MeetingSummary;
+    try {
+      summary = SummaryOutputSchema.parse(JSON.parse(text));
+    } catch {
+      return json(req, { error: "회의록 형식을 해석하지 못했습니다. 다시 시도해주세요." }, 502);
+    }
+    return json(req, summary);
   } catch (err) {
     return json(req, { error: errorMessage(err) }, 502);
   }

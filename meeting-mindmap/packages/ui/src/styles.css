@@ -48,6 +48,7 @@ body {
 .mm-header h1 { font-size: 17px; margin: 0; }
 .mm-header .spacer { flex: 1; }
 .mm-error { background: var(--danger); color: #fff; padding: 8px 16px; font-size: 14px; }
+.mm-warning { background: var(--fresh); color: #1c1d21; padding: 8px 16px; font-size: 14px; }
 
 .mm-tabs { display: none; }
 .mm-main {

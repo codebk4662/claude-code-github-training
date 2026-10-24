@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { getMicStream } from "@mm/core";
+import { getMicStream, MockSttSession } from "@mm/core";
 import {
   LevelMeter,
   MeetingController,
@@ -41,6 +41,8 @@ export default function OfflineMeetingPage() {
         apiBase: "",
         mode: "offline",
         context: `대면 회의, 참석자 약 ${people}명.${title ? ` 주제: ${title}` : ""}`,
+        createStt:
+          process.env.NEXT_PUBLIC_MOCK_STT === "1" ? (opts) => new MockSttSession(opts) : undefined,
       });
       await controller.current.start([{ channel: "room", stream, diarization: true }], title || "새 회의");
       // 녹음 중 화면이 꺼지면 오디오가 끊기는 기기가 있어 화면 꺼짐을 막는다

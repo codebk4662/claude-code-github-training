@@ -6,5 +6,6 @@ export * from "./transcript/assembler";
 export * from "./transcript/speakers";
 export * from "./stt/types";
 export * from "./stt/soniox";
+export * from "./stt/mock";
 export * from "./audio/pcmCapture";
 export * from "./api/contracts";

@@ -27,9 +27,12 @@ export interface MeetingState {
   finalSummary: MeetingSummary | null;
   /** 마인드맵 갱신 요청 진행 중 */
   updating: boolean;
+  /** 녹음은 계속되지만 최근 마인드맵 갱신이 실패했을 때의 경고 (status는 바꾸지 않음) */
+  syncWarning: string | null;
 
   reset(title?: string): void;
   setStatus(status: MeetingStatus, error?: string | null): void;
+  setSyncWarning(warning: string | null): void;
   addUtterance(u: Utterance): void;
   removeUtterance(id: string): void;
   setPartial(channel: string, p: PartialLine | null): void;
@@ -57,6 +60,7 @@ const initial = (title = "새 회의") => ({
   speakerNames: {},
   finalSummary: null,
   updating: false,
+  syncWarning: null,
 });
 
 export const useMeeting = create<MeetingState>()((set) => ({
@@ -87,5 +91,6 @@ export const useMeeting = create<MeetingState>()((set) => ({
     }),
   setFinalSummary: (finalSummary) => set({ finalSummary }),
   setUpdating: (updating) => set({ updating }),
+  setSyncWarning: (syncWarning) => set({ syncWarning }),
   load: (snapshot) => set({ ...initial(), ...snapshot, status: "done" }),
 }));

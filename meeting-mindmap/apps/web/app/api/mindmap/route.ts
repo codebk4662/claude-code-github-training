@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       // 고정된 시스템 프롬프트는 캐시해서 매 호출 비용·지연을 줄인다
       system: [{ type: "text", text: MINDMAP_SYSTEM, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: mindmapUserMessage(parsed.data) }],
-      output_config: { effort: "low", format: zodOutputFormat(MindmapOutputSchema) },
+      output_config: { format: zodOutputFormat(MindmapOutputSchema) },
     });
 
     if (response.stop_reason === "refusal" || !response.parsed_output) {

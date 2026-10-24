@@ -13,6 +13,7 @@ import {
   type MindmapResponse,
   type PcmCapture,
   type SttSession,
+  type SttSessionOptions,
   type SttTokenResponse,
   type SummaryRequest,
   type Utterance,
@@ -40,6 +41,8 @@ export interface ControllerOptions {
   sttModel?: string;
   /** STT 문맥 힌트 (회의 주제, 고유명사) */
   context?: string;
+  /** STT 세션 팩토리. 기본값은 SonioxSession. 테스트/데모용으로 교체 가능 */
+  createStt?: (opts: SttSessionOptions) => SttSession;
 }
 
 interface Pipeline {
@@ -56,14 +59,17 @@ interface Pipeline {
 export class MeetingController {
   private pipelines: Pipeline[] = [];
   private scheduler: BatchScheduler<Utterance>;
-  private meetingId = `m-${Date.now()}`;
+  private meetingId = "";
 
   constructor(private readonly opts: ControllerOptions) {
     this.scheduler = new BatchScheduler<Utterance>({
       intervalMs: opts.intervalMs ?? 20_000,
       maxBatch: opts.maxBatch ?? 8,
       run: (batch) => this.updateMindmap(batch),
-      onError: (err) => console.error("[mindmap]", err),
+      onError: (err) => {
+        console.error("[mindmap]", err);
+        this.store.setSyncWarning("마인드맵 갱신에 실패했습니다. 녹음은 계속되며 다음 갱신에서 다시 시도합니다.");
+      },
     });
   }
 
@@ -77,6 +83,7 @@ export class MeetingController {
   }
 
   async start(sources: AudioSource[], title?: string) {
+    this.meetingId = `m-${Date.now()}`;
     this.store.reset(title);
     this.store.setStatus("starting");
     const startedAt = Date.now();
@@ -87,10 +94,12 @@ export class MeetingController {
           fixedSpeakerKey: source.fixedSpeakerKey,
           startedAt,
         });
-        const stt = new SonioxSession({
+        const createStt =
+          this.opts.createStt ??
+          ((opts: SttSessionOptions) => new SonioxSession({ ...opts, model: this.opts.sttModel }));
+        const stt = createStt({
           getApiKey: () => this.getSttKey(),
           diarization: source.diarization,
-          model: this.opts.sttModel,
           context: this.opts.context,
           onTokens: (tokens) => {
             const { finals, partial } = assembler.feed(tokens);
@@ -143,6 +152,7 @@ export class MeetingController {
       const res = await postJson<MindmapResponse>(this.opts.apiBase, "/api/mindmap", req);
       this.store.applyOps(res.ops, res.title);
       this.store.addSummaryBullets(res.summaryBullets);
+      this.store.setSyncWarning(null);
     } finally {
       this.store.setUpdating(false);
     }

@@ -8,3 +8,4 @@ out/
 .env
 .env.local
 next-env.d.ts
+AGENTS.md

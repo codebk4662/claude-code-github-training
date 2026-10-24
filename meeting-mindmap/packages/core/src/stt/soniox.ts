@@ -3,7 +3,7 @@ import type { SttSession, SttSessionOptions } from "./types";
 
 export const SONIOX_WS_URL = "wss://stt-rt.soniox.com/transcribe-websocket";
 /** 실시간 모델 이름. Soniox가 새 모델을 내면 이 값(또는 옵션)만 바꾸면 된다. */
-export const SONIOX_DEFAULT_MODEL = "stt-rt-v3";
+export const SONIOX_DEFAULT_MODEL = "stt-rt-v5";
 
 interface SonioxToken {
   text: string;

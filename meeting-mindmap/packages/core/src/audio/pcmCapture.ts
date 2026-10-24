@@ -50,6 +50,7 @@ export async function startPcmCapture(
   onLevel?: (rms: number) => void,
 ): Promise<PcmCapture> {
   const ctx = new AudioContext();
+  if (ctx.state === "suspended") await ctx.resume();
   const url = URL.createObjectURL(new Blob([WORKLET_SOURCE], { type: "application/javascript" }));
   try {
     await ctx.audioWorklet.addModule(url);

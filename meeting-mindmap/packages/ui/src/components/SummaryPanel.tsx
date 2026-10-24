@@ -2,12 +2,15 @@ import { useMeeting } from "../store";
 import { buildMeetingMarkdown, downloadText } from "../export";
 
 export function SummaryPanel() {
-  const s = useMeeting();
-  const summary = s.finalSummary;
+  const summary = useMeeting((s) => s.finalSummary);
+  const summaryBullets = useMeeting((s) => s.summaryBullets);
+  const status = useMeeting((s) => s.status);
+  const hasUtterances = useMeeting((s) => s.utterances.length > 0);
 
   const exportMd = () => {
+    const s = useMeeting.getState();
     const md = buildMeetingMarkdown({
-      summary,
+      summary: s.finalSummary,
       bullets: s.summaryBullets,
       mindmap: s.mindmap,
       utterances: s.utterances,
@@ -19,7 +22,7 @@ export function SummaryPanel() {
 
   return (
     <div className="mm-summary">
-      {s.status === "stopping" && <p className="mm-muted">회의록을 작성하고 있습니다…</p>}
+      {status === "stopping" && <p className="mm-muted">회의록을 작성하고 있습니다…</p>}
       {summary ? (
         <>
           <h3>{summary.title}</h3>
@@ -37,9 +40,9 @@ export function SummaryPanel() {
       ) : (
         <>
           <h3>실시간 요약</h3>
-          {s.summaryBullets.length ? (
+          {summaryBullets.length ? (
             <ul>
-              {s.summaryBullets.map((b, i) => (
+              {summaryBullets.map((b, i) => (
                 <li key={i}>{b}</li>
               ))}
             </ul>
@@ -48,7 +51,7 @@ export function SummaryPanel() {
           )}
         </>
       )}
-      {(s.utterances.length > 0 || summary) && (
+      {(hasUtterances || summary) && (
         <button className="mm-btn secondary" onClick={exportMd}>
           Markdown으로 내보내기
         </button>

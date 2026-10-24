@@ -14,11 +14,13 @@ type Tab = "map" | "transcript" | "summary";
 export function MeetingWorkspace({ header, compact = false }: { header: ReactNode; compact?: boolean }) {
   const [tab, setTab] = useState<Tab>("map");
   const error = useMeeting((s) => s.error);
+  const syncWarning = useMeeting((s) => s.syncWarning);
 
   return (
     <div className={`mm-app${compact ? " compact" : ""}`}>
       <header className="mm-header">{header}</header>
       {error && <div className="mm-error">{error}</div>}
+      {!error && syncWarning && <div className="mm-warning">{syncWarning}</div>}
       <nav className="mm-tabs">
         {(
           [

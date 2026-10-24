@@ -5,8 +5,8 @@
 import { z } from "zod";
 import type { MindmapRequest, SummaryRequest } from "../api/contracts";
 
-export const MINDMAP_MODEL = "claude-haiku-5-5";
-export const SUMMARY_MODEL = "claude-sonnet-5-5";
+export const MINDMAP_MODEL = "claude-haiku-4-5";
+export const SUMMARY_MODEL = "claude-sonnet-5";
 
 export const PatchOpSchema = z.object({
   op: z.enum(["add", "update", "move", "merge"]),
