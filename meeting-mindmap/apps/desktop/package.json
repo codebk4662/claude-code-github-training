@@ -1,0 +1,46 @@
+{
+  "name": "@mm/desktop",
+  "productName": "회의 마인드맵 (온라인)",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Teams/Zoom 화상회의의 시스템 오디오 + 내 마이크를 녹음해 실시간 마인드맵을 만드는 데스크톱 앱",
+  "main": "dist-electron/main/index.js",
+  "scripts": {
+    "dev": "vite",
+    "start": "tsc -p tsconfig.main.json && electron .",
+    "dev:electron": "tsc -p tsconfig.main.json && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .",
+    "build": "vite build && tsc -p tsconfig.main.json",
+    "dist": "pnpm build && electron-builder",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.main.json --noEmit"
+  },
+  "dependencies": {
+    "@mm/core": "workspace:*",
+    "@mm/ui": "workspace:*",
+    "@xyflow/react": "^12.12.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "cross-env": "^10.0.0",
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.5"
+  },
+  "build": {
+    "appId": "com.example.meetingmindmap",
+    "files": ["dist/**", "dist-electron/**"],
+    "mac": {
+      "target": "dmg",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "회의 중 내 목소리를 녹음해 자막과 마인드맵을 만듭니다.",
+        "NSAudioCaptureUsageDescription": "화상회의 상대방의 소리(시스템 오디오)를 녹음합니다."
+      }
+    },
+    "win": { "target": "nsis" }
+  }
+}

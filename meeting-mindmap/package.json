@@ -1,0 +1,17 @@
+{
+  "name": "meeting-mindmap",
+  "private": true,
+  "version": "0.1.0",
+  "description": "회의를 녹음하며 실시간 자막·자동 정리·라이브 마인드맵을 만드는 앱 (온라인/오프라인 2가지 버전)",
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "dev:web": "pnpm --filter @mm/web dev",
+    "dev:desktop": "pnpm --filter @mm/desktop dev",
+    "build": "pnpm -r build",
+    "test": "pnpm --filter @mm/core test",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["electron", "esbuild"]
+  }
+}
